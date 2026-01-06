@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>우슬과 용닥터의 대본 정리 프로그램</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            max-width: 1200px;
+            width: 100%;
+            padding: 40px;
+        }
+
+        h1 {
+            color: #667eea;
+            text-align: center;
+            margin-bottom: 10px;
+            font-size: 2.5em;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 1.1em;
+        }
+
+        .upload-area {
+            border: 3px dashed #667eea;
+            border-radius: 15px;
+            padding: 60px 20px;
+            text-align: center;
+            background: #f8f9ff;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-bottom: 30px;
+        }
+
+        .upload-area:hover {
+            background: #eef1ff;
+            border-color: #764ba2;
+        }
+
+        .upload-area.dragover {
+            background: #e0e7ff;
+            border-color: #764ba2;
+            transform: scale(1.02);
+        }
+
+        .upload-icon {
+            font-size: 4em;
+            margin-bottom: 20px;
+        }
+
+        .upload-text {
+            font-size: 1.3em;
+            color: #667eea;
+            font-weight: 600;
+            margin-bottom: 10px;
+        }
+
+        .upload-hint {
+            color: #999;
+            font-size: 0.95em;
+        }
+
+        input[type="file"] {
+            display: none;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            margin-bottom: 30px;
+        }
+
+        button {
+            padding: 15px 35px;
+            border: none;
+            border-radius: 10px;
+            font-size: 1.1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        .btn-process {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-process:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+        }
+
+        .btn-process:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+
+        .btn-download {
+            background: #10b981;
+            color: white;
+            display: none;
+        }
+
+        .btn-download:hover {
+            background: #059669;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+        }
+
+        .btn-copy {
+            background: #3b82f6;
+            color: white;
+            display: none;
+        }
+
+        .btn-copy:hover {
+            background: #2563eb;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+        }
+
+        .result-area {
+            display: none;
+            margin-top: 30px;
+        }
+
+        .result-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .result-title {
+            font-size: 1.3em;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .stats {
+            display: flex;
+            gap: 20px;
+            font-size: 0.9em;
+            color: #666;
+        }
+
+        .stat-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        textarea {
+            width: 100%;
+            min-height: 400px;
+            padding: 20px;
+            border: 2px solid #e5e7eb;
+            border-radius: 10px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.95em;
+            line-height: 1.6;
+            resize: vertical;
+            background: #f9fafb;
+        }
+
+        textarea:focus {
+            outline: none;
+            border-color: #667eea;
+            background: white;
+        }
+
+        .info-box {
+            background: #f0f9ff;
+            border-left: 4px solid #3b82f6;
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 5px;
+        }
+
+        .info-title {
+            font-weight: 600;
+            color: #1e40af;
+            margin-bottom: 8px;
+        }
+
+        .info-list {
+            color: #1e3a8a;
+            font-size: 0.9em;
+            line-height: 1.8;
+        }
+
+        .file-name {
+            display: none;
+            text-align: center;
+            margin-top: 15px;
+            padding: 10px;
+            background: #f0fdf4;
+            border-radius: 8px;
+            color: #166534;
+            font-weight: 500;
+        }
+
+        .toast {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            background: #10b981;
+            color: white;
+            padding: 15px 25px;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+            display: none;
+            animation: slideIn 0.3s ease;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(400px);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 20px;
+            }
+
+            h1 {
+                font-size: 1.8em;
+            }
+
+            .button-group {
+                flex-direction: column;
+            }
+
+            button {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📝 우슬과 용닥터의 대본 정리 프로그램</h1>
+        <p class="subtitle">대본 파일을 업로드하면 자동으로 정리해드립니다</p>
+
+        <div class="info-box">
+            <div class="info-title">🔧 처리 항목</div>
+            <div class="info-list">
+                ✓ 불필요한 빈 줄(엔터) 삭제<br>
+                ✓ 이미지 첨부 제거 (![...](...))<br>
+                ✓ 삭제 표시 내용 제거 (~~...~~)<br>
+                ✓ PDF 첨부 제거 ([....pdf](...))<br>
+                ✓ 구분선(---) 유지 및 기존 줄바꿈 유지
+            </div>
+        </div>
+
+        <div class="upload-area" id="uploadArea">
+            <div class="upload-icon">📄</div>
+            <div class="upload-text">클릭하거나 파일을 드래그하세요</div>
+            <div class="upload-hint">텍스트 파일(.txt)만 지원됩니다</div>
+            <input type="file" id="fileInput" accept=".txt">
+        </div>
+
+        <div class="file-name" id="fileName"></div>
+
+        <div class="button-group">
+            <button class="btn-process" id="processBtn" disabled>정리하기</button>
+            <button class="btn-copy" id="copyBtn">복사하기</button>
+            <button class="btn-download" id="downloadBtn">다운로드</button>
+        </div>
+
+        <div class="result-area" id="resultArea">
+            <div class="result-header">
+                <div class="result-title">정리된 대본</div>
+                <div class="stats">
+                    <div class="stat-item">
+                        <span>📊</span>
+                        <span id="statsText"></span>
+                    </div>
+                </div>
+            </div>
+            <textarea id="resultText" readonly></textarea>
+        </div>
+    </div>
+
+    <div class="toast" id="toast">클립보드에 복사되었습니다!</div>
+
+    <script>
+        let originalText = '';
+        let processedText = '';
+        let fileName = '';
+
+        const uploadArea = document.getElementById('uploadArea');
+        const fileInput = document.getElementById('fileInput');
+        const fileNameDisplay = document.getElementById('fileName');
+        const processBtn = document.getElementById('processBtn');
+        const copyBtn = document.getElementById('copyBtn');
+        const downloadBtn = document.getElementById('downloadBtn');
+        const resultArea = document.getElementById('resultArea');
+        const resultText = document.getElementById('resultText');
+        const statsText = document.getElementById('statsText');
+        const toast = document.getElementById('toast');
+
+        // 드래그 앤 드롭 이벤트
+        uploadArea.addEventListener('click', () => fileInput.click());
+
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.classList.add('dragover');
+        });
+
+        uploadArea.addEventListener('dragleave', () => {
+            uploadArea.classList.remove('dragover');
+        });
+
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.classList.remove('dragover');
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                handleFile(files[0]);
+            }
+        });
+
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                handleFile(e.target.files[0]);
+            }
+        });
+
+        function handleFile(file) {
+            if (!file.name.endsWith('.txt')) {
+                alert('텍스트 파일(.txt)만 업로드 가능합니다.');
+                return;
+            }
+
+            fileName = file.name;
+            fileNameDisplay.textContent = `📎 ${fileName}`;
+            fileNameDisplay.style.display = 'block';
+
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                originalText = e.target.result;
+                processBtn.disabled = false;
+            };
+            reader.readAsText(file, 'UTF-8');
+        }
+
+        processBtn.addEventListener('click', () => {
+            processedText = cleanScript(originalText);
+            
+            // 통계 계산
+            const originalLines = originalText.split('\n').length;
+            const processedLines = processedText.split('\n').length;
+            const removedLines = originalLines - processedLines;
+            
+            statsText.textContent = `${originalLines}줄 → ${processedLines}줄 (${removedLines}줄 정리됨)`;
+            
+            resultText.value = processedText;
+            resultArea.style.display = 'block';
+            copyBtn.style.display = 'inline-block';
+            downloadBtn.style.display = 'inline-block';
+
+            // 결과로 스크롤
+            resultArea.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        });
+
+        function cleanScript(text) {
+            let lines = text.split('\n');
+            let result = [];
+            
+            for (let line of lines) {
+                // 빈 줄 건너뛰기 (완전히 비어있거나 공백만 있는 줄)
+                if (line.trim() === '') {
+                    continue;
+                }
+                
+                // 이미지 첨부 삭제: ![파일명.확장자](attachment:...)
+                line = line.replace(/!\[.*?\.(png|jpg|jpeg|gif|webp|bmp|svg)\]\(attachment:.*?\)/gi, '');
+                
+                // PDF 첨부 삭제: [파일명.pdf](attachment:...)
+                line = line.replace(/\[.*?\.pdf\]\(attachment:.*?\)/gi, '');
+                
+                // 삭제 표시 내용 제거: ~~내용~~
+                line = line.replace(/~~.*?~~/g, '');
+                
+                // 처리 후 빈 줄이 되었다면 건너뛰기
+                if (line.trim() === '') {
+                    continue;
+                }
+                
+                // --- 는 유지
+                result.push(line);
+            }
+            
+            return result.join('\n');
+        }
+
+        copyBtn.addEventListener('click', async () => {
+            try {
+                await navigator.clipboard.writeText(processedText);
+                showToast();
+            } catch (err) {
+                // 복사 실패 시 대체 방법
+                resultText.select();
+                document.execCommand('copy');
+                showToast();
+            }
+        });
+
+        downloadBtn.addEventListener('click', () => {
+            const blob = new Blob([processedText], { type: 'text/plain;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = fileName.replace('.txt', '_정리됨.txt');
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        });
+
+        function showToast() {
+            toast.style.display = 'block';
+            setTimeout(() => {
+                toast.style.display = 'none';
+            }, 2000);
+        }
+    </script>
+</body>
+</html>
