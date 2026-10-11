@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>우슬과 용닥터의 대본 정리 프로그램 v2</title>
+<title>우슬과 용닥터의 대본 정리 프로그램 v3</title>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
   body {
@@ -70,15 +70,17 @@
 </head>
 <body>
 <div class="container">
-  <h1>📝 우슬과 용닥터의 대본 정리 프로그램 v2</h1>
+  <h1>📝 우슬과 용닥터의 대본 정리 프로그램 v3</h1>
   <p class="subtitle">노션에서 <b>Ctrl+A → Ctrl+C</b> 한 뒤 왼쪽에 붙여넣으세요. 오른쪽에 읽을 내용만 바로 나옵니다.</p>
 
   <div class="options">
     <label><input type="checkbox" id="optHeaders" checked> PART 제목(##) 남기기</label>
     <label><input type="checkbox" id="optParaGap"> 문단 사이 빈 줄 1개 남기기</label>
-    <label><input type="checkbox" id="optDivider" checked> 구분선(---) 남기기</label>
-    <span class="kw">괄호 메모 키워드
-      <input type="text" id="optKeywords" value="캡션, 자막, 화면, 이미지, 편집, 참고, 메모, B-roll, CG">
+    <label><input type="checkbox" id="optDivider"> 구분선(---) 남기기</label>
+    <label><input type="checkbox" id="optSub" checked> [소제목] 남기기</label>
+    <label><input type="checkbox" id="optParenLine" checked> 괄호로만 된 줄 지우기</label>
+    <span class="kw">연출 메모 키워드
+      <input type="text" id="optKeywords" value="캡션, 자막, 화면, 이미지, 사진, 첨부, 촬영, 보여주, 전환, 편집, 메모, B-roll, CG">
     </span>
   </div>
 
@@ -116,9 +118,9 @@ const input = $('input'), output = $('output');
 let fileBase = '';
 
 // 저장된 설정 불러오기 (안 되면 기본값)
-const SETTINGS = ['optHeaders', 'optParaGap', 'optDivider', 'optKeywords'];
+const SETTINGS = ['optHeaders', 'optParaGap', 'optDivider', 'optSub', 'optParenLine', 'optKeywords'];
 try {
-  const saved = JSON.parse(localStorage.getItem('scriptCleanerSettings') || '{}');
+  const saved = JSON.parse(localStorage.getItem('scriptCleanerSettings_v3') || '{}');
   SETTINGS.forEach(k => {
     if (saved[k] === undefined) return;
     if ($(k).type === 'checkbox') $(k).checked = saved[k]; else $(k).value = saved[k];
@@ -128,7 +130,7 @@ function saveSettings() {
   try {
     const o = {};
     SETTINGS.forEach(k => o[k] = $(k).type === 'checkbox' ? $(k).checked : $(k).value);
-    localStorage.setItem('scriptCleanerSettings', JSON.stringify(o));
+    localStorage.setItem('scriptCleanerSettings_v3', JSON.stringify(o));
   } catch (e) {}
 }
 
@@ -145,6 +147,10 @@ function cleanScript(text, opt) {
   const reNote = kws.length
     ? new RegExp('^[\\(\\[\\{（【<※]?\\s*(' + kws.join('|') + ')\\s*[:：\\]\\)】>]', 'i')
     : null;
+  // 문장 안에 붙은 연출 메모: (전후 사진 보여주며) (사진첨부필요) 등 — 키워드가 든 괄호만 삭제
+  const reInline = kws.length
+    ? new RegExp('\\s*[\\(（][^()（）]*(' + kws.join('|') + ')[^()（）]*[\\)）]\\s*', 'gi')
+    : null;
 
   const out = [], removed = [];
   let pendingGap = false;
@@ -154,14 +160,35 @@ function cleanScript(text, opt) {
     const drop = why => removed.push(why + '  ' + raw.trim());
 
     if (line === '') { pendingGap = out.length > 0; continue; }
+    if (/^(※|\/\/)/.test(line))                      { drop('[작업메모]'); continue; }
     if (line.includes('~~'))                         { drop('[삭제표시]'); continue; }
     if (reImage.test(line))                          { drop('[이미지]'); continue; }
     if (reAttach.test(line))                         { drop('[첨부/링크]'); continue; }
     if (line.includes('drive.google.com'))           { drop('[드라이브]'); continue; }
     if (reUrlOnly.test(line))                        { drop('[링크]'); continue; }
+    // 🔗 원문: https://...  /  출처: https://...  /  URL 빼면 거의 아무것도 안 남는 줄
+    if (/https?:\/\//i.test(line)) {
+      const rest = line.replace(/https?:\/\/\S+/gi, '').replace(/[^가-힣a-zA-Z0-9]/g, '');
+      if (/^🔗/.test(line) || /^(원문|출처|링크|참고|source|link)\s*[:：]/i.test(line) || rest.length <= 6) {
+        drop('[링크]'); continue;
+      }
+    }
     // 파일명만 있는 줄: 확장자로 끝나고, 띄어쓰기가 없거나 한글 문장이 아닌 경우
     if (reBareFile.test(line) && (!/\s/.test(line) || !/[가-힣]/.test(line))) { drop('[파일명]'); continue; }
     if (reNote && reNote.test(line))                 { drop('[메모]'); continue; }
+    // 줄 전체가 괄호 하나로 된 경우: (중국에서 진행된 GT20029 2상. ...) 같은 화면 설명
+    if (opt.parenLine && /^[\(（][^()（）]*[\)）]$/.test(line)) { drop('[괄호메모]'); continue; }
+    // [추천 제품 & 바르는 횟수] 같은 소제목
+    if (!opt.sub && /^\[[^\]]+\]$/.test(line))       { drop('[소제목]'); continue; }
+    // 문장 속 연출 메모만 잘라내기
+    if (reInline && reInline.test(line)) {
+      reInline.lastIndex = 0;
+      const cut = line.replace(reInline, ' ').replace(/\s{2,}/g, ' ').trim();
+      removed.push('[문장속 메모]  ' + (line.match(reInline) || []).map(s => s.trim()).join(' '));
+      if (!cut) continue;
+      line = cut;
+    }
+    reInline && (reInline.lastIndex = 0);
 
     if (/^-{3,}$|^\*{3,}$/.test(line)) {
       if (!opt.divider) { drop('[구분선]'); continue; }
@@ -193,6 +220,8 @@ function run() {
     headers: $('optHeaders').checked,
     paraGap: $('optParaGap').checked,
     divider: $('optDivider').checked,
+    sub: $('optSub').checked,
+    parenLine: $('optParenLine').checked,
     keywords: $('optKeywords').value
   };
   const src = input.value;
